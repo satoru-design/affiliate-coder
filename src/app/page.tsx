@@ -1,65 +1,170 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useEffect } from "react";
+import { Search, Loader2, Copy, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SettingsDialog } from "@/components/settings-dialog";
+import { toast } from "sonner";
+
+interface ProductData {
+  itemName: string;
+  itemPrice: number;
+  imageUrl: string;
+  affiliateUrl: string;
+  shopName: string;
+}
 
 export default function Home() {
+  const [keyword, setKeyword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [product, setProduct] = useState<ProductData | null>(null);
+  const [amazonId, setAmazonId] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  // Load Amazon ID from localStorage
+  useEffect(() => {
+    const id = localStorage.getItem("amazon_tracking_id") || "";
+    setAmazonId(id);
+  }, []);
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!keyword) return;
+
+    // re-fetch amazonId just in case it was changed
+    const currentAmazonId = localStorage.getItem("amazon_tracking_id") || "";
+    setAmazonId(currentAmazonId);
+
+    setLoading(true);
+    setProduct(null);
+
+    try {
+      const res = await fetch(`/api/search?keyword=${encodeURIComponent(keyword)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "検索に失敗しました");
+      }
+      setProduct(data);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        toast.error(err.message);
+      } else {
+        toast.error("エラーが発生しました");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getAmazonUrl = (productName: string) => {
+    const baseUrl = `https://www.amazon.co.jp/s?k=${encodeURIComponent(productName)}`;
+    return amazonId ? `${baseUrl}&tag=${amazonId}` : baseUrl;
+  };
+
+  const generateHtmlContent = () => {
+    if (!product) return "";
+    const amzUrl = getAmazonUrl(keyword || product.itemName); // Use keyword preferred for broader search, or itemName
+    
+    // インラインスタイル多用のHTML
+    return `
+<div style="background:#fff; border:1px solid #f1f5f9; border-radius:8px; padding:24px; max-width:600px; margin:24px auto; font-family:sans-serif; box-shadow:0 1px 2px rgba(0,0,0,0.02); box-sizing:border-box;">
+  <div style="display:flex; gap:24px; flex-wrap:wrap; align-items:center;">
+    <div style="flex-shrink:0; margin:0 auto;">
+      <a href="${product.affiliateUrl}" target="_blank" rel="noopener sponsored">
+        <img src="${product.imageUrl}" alt="${product.itemName}" style="max-width:128px; height:auto; border-radius:4px; border:none;" />
+      </a>
+    </div>
+    <div style="flex:1; min-width:200px;">
+      <a href="${product.affiliateUrl}" target="_blank" rel="noopener sponsored" style="text-decoration:none; color:#0f172a; font-size:16px; font-weight:500; line-height:1.6; display:block;">
+        ${product.itemName}
+      </a>
+      <div style="display:flex; gap:12px; margin-top:20px; flex-wrap:wrap;">
+        <a href="${amzUrl}" target="_blank" rel="noopener sponsored" style="flex:1; min-width:120px; text-align:center; padding:10px 16px; border:1px solid #e69a00; border-radius:6px; color:#ffffff; text-decoration:none; font-size:14px; font-weight:500; background:#f5a623; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+          Amazonで見る
+        </a>
+        <a href="${product.affiliateUrl}" target="_blank" rel="noopener sponsored" style="flex:1; min-width:120px; text-align:center; padding:10px 16px; border:1px solid #a80000; border-radius:6px; color:#ffffff; text-decoration:none; font-size:14px; font-weight:500; background:#bf0000; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+          楽天で見る
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+`.trim();
+  };
+
+  const handleCopy = () => {
+    const html = generateHtmlContent();
+    navigator.clipboard.writeText(html);
+    setCopied(true);
+    toast.success("クリップボードにコピーしました");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="min-h-screen bg-slate-50 text-slate-900 p-4 sm:p-8">
+      <div className="max-w-4xl mx-auto space-y-8">
+        <header className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800">Widget Generator</h1>
+            <p className="text-sm text-slate-500 mt-1">Invisible Commerce Style</p>
+          </div>
+          <SettingsDialog />
+        </header>
+
+        <Card className="border-slate-200">
+          <CardContent className="p-6">
+            <form onSubmit={handleSearch} className="flex gap-3">
+              <Input
+                placeholder="商品名やキーワードを入力..."
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                className="flex-1"
+                required
+              />
+              <Button type="submit" disabled={loading}>
+                {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Search className="w-4 h-4 mr-2" />}
+                検索
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        {product && (
+          <Tabs defaultValue="preview" className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="preview">Preview</TabsTrigger>
+              <TabsTrigger value="code">HTML Code</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="preview" className="mt-0">
+              <Card className="border-slate-200 p-8 flex items-center justify-center bg-white/50">
+                {/* プレビュー表示: 実際のHTML出力をそのまま dangerouslySetInnerHTML で流し込む */}
+                <div dangerouslySetInnerHTML={{ __html: generateHtmlContent() }} className="w-full" />
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="code" className="mt-0">
+              <Card className="border-slate-200 overflow-hidden flex flex-col">
+                <div className="bg-slate-100 px-4 py-2 flex items-center justify-between border-b border-slate-200">
+                  <span className="text-xs font-mono text-slate-500">HTML / Inline CSS</span>
+                  <Button variant="ghost" size="sm" onClick={handleCopy}>
+                    {copied ? <Check className="w-4 h-4 mr-2 text-green-600" /> : <Copy className="w-4 h-4 mr-2" />}
+                    {copied ? "Copied" : "Copy Code"}
+                  </Button>
+                </div>
+                <div className="p-4 bg-slate-950 text-slate-50 overflow-x-auto">
+                  <pre className="text-sm font-mono whitespace-pre-wrap">
+                    {generateHtmlContent()}
+                  </pre>
+                </div>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        )}
+      </div>
     </div>
   );
 }
