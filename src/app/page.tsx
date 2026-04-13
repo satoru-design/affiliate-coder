@@ -21,13 +21,13 @@ export default function Home() {
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(false);
   const [product, setProduct] = useState<ProductData | null>(null);
-  const [amazonId, setAmazonId] = useState("");
+  const [amazonId, setAmazonId] = useState("strkkcogmailc-22");
   const [copied, setCopied] = useState(false);
 
   // Load Amazon ID from localStorage
   useEffect(() => {
-    const id = localStorage.getItem("amazon_tracking_id") || "";
-    setAmazonId(id);
+    const id = localStorage.getItem("amazon_tracking_id");
+    if (id !== null) setAmazonId(id);
   }, []);
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -35,8 +35,8 @@ export default function Home() {
     if (!keyword) return;
 
     // re-fetch amazonId just in case it was changed
-    const currentAmazonId = localStorage.getItem("amazon_tracking_id") || "";
-    setAmazonId(currentAmazonId);
+    const currentAmazonId = localStorage.getItem("amazon_tracking_id");
+    if (currentAmazonId !== null) setAmazonId(currentAmazonId);
 
     setLoading(true);
     setProduct(null);

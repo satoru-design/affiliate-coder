@@ -17,13 +17,13 @@ import { Settings } from "lucide-react";
 import { toast } from "sonner";
 
 export function SettingsDialog() {
-  const [amazonId, setAmazonId] = useState("");
+  const [amazonId, setAmazonId] = useState("strkkcogmailc-22");
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
     // コンポーネントマウント時にLocalStorageから読み込む
     const savedId = localStorage.getItem("amazon_tracking_id");
-    if (savedId) {
+    if (savedId !== null) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setAmazonId(savedId);
     }
