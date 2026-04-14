@@ -74,7 +74,7 @@ export default function Home() {
   <div style="display:flex; gap:24px; flex-wrap:wrap; align-items:center;">
     <div style="flex-shrink:0; margin:0 auto;">
       <a href="${product.affiliateUrl}" target="_blank" rel="noopener sponsored">
-        <img src="${product.imageUrl}" alt="${product.itemName}" style="max-width:128px; height:auto; border-radius:4px; border:none;" />
+        <img src="${product.imageUrl}" alt="${product.itemName}" style="max-width:100%; width:300px; aspect-ratio:1/1; object-fit:contain; border-radius:4px; border:none;" />
       </a>
     </div>
     <div style="flex:1; min-width:200px;">
