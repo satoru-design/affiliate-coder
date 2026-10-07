@@ -1,5 +1,25 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## 環境変数
+
+このアプリはパスワード認証で保護されている。起動前に `.env.example` をもとに
+`.env.local` を作り、4つの変数を設定する。
+
+| 変数 | 用途 | 条件 |
+|---|---|---|
+| `RAKUTEN_APP_ID` | 楽天ウェブサービスの applicationId | 必須 |
+| `RAKUTEN_AFFILIATE_ID` | 楽天のアフィリエイトID | 必須 |
+| `APP_PASSWORD` | ログインパスワード | 12文字以上 |
+| `SESSION_SECRET` | セッション Cookie の署名鍵 | 32文字以上 |
+
+`SESSION_SECRET` は `openssl rand -base64 32` で生成する。
+
+`APP_PASSWORD` と `SESSION_SECRET` が条件を満たさない場合、ログインは常に失敗する。
+設定漏れで認証が無効化されるのを避けるため、意図的にこの挙動にしている。
+
+Vercel にデプロイする場合は、同じ4つを Environment Variables に登録する。
+`SESSION_SECRET` を変更すると、既存のログインセッションはすべて無効になる。
+
 ## Getting Started
 
 First, run the development server:

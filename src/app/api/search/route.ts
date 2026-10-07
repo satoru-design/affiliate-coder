@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth";
 
 const RAKUTEN_API_URL = "https://app.rakuten.co.jp/services/api/IchibaItem/Search/20220601";
 
@@ -6,6 +8,15 @@ const RAKUTEN_API_URL = "https://app.rakuten.co.jp/services/api/IchibaItem/Searc
 const MAX_KEYWORD_LENGTH = 128;
 
 export async function GET(request: Request) {
+  // 認証はここでも必ず確認する。
+  // proxy.ts の判定は前段の振り分けにすぎず、matcher の記述ミスや
+  // proxy 層のバイパス脆弱性があると素通りしてしまう。
+  // このエンドポイントは楽天APIの資格情報を使うため、実際の防御線をここに置く。
+  const session = (await cookies()).get(SESSION_COOKIE)?.value;
+  if (!(await verifySessionToken(session))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const keyword = searchParams.get("keyword")?.trim();
 
