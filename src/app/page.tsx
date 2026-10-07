@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Loader2, Copy, Check } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search, Loader2, Copy, Check, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -51,6 +52,7 @@ function sanitizeAmazonId(value: string): string {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(false);
   const [product, setProduct] = useState<ProductData | null>(null);
@@ -76,6 +78,11 @@ export default function Home() {
 
     try {
       const res = await fetch(`/api/search?keyword=${encodeURIComponent(keyword)}`);
+      // セッションが切れていたらログイン画面へ戻す。
+      if (res.status === 401) {
+        router.replace("/login");
+        return;
+      }
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || "検索に失敗しました");
@@ -132,6 +139,12 @@ export default function Home() {
 `.trim();
   };
 
+  const handleLogout = async () => {
+    await fetch("/api/logout", { method: "POST" }).catch(() => {});
+    router.replace("/login");
+    router.refresh();
+  };
+
   const handleCopy = () => {
     const html = generateHtmlContent();
     navigator.clipboard.writeText(html);
@@ -148,7 +161,12 @@ export default function Home() {
             <h1 className="text-2xl font-bold text-slate-800">Widget Generator</h1>
             <p className="text-sm text-slate-500 mt-1">Invisible Commerce Style</p>
           </div>
-          <SettingsDialog />
+          <div className="flex items-center gap-2">
+            <SettingsDialog />
+            <Button variant="outline" size="icon" onClick={handleLogout} title="ログアウト">
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </header>
 
         <Card className="border-slate-200">
