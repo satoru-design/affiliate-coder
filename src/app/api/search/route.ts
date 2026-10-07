@@ -2,13 +2,23 @@ import { NextResponse } from "next/server";
 
 const RAKUTEN_API_URL = "https://app.rakuten.co.jp/services/api/IchibaItem/Search/20220601";
 
+// 楽天APIの keyword 上限に合わせた長さ制限。サーバー側で必ず検証する。
+const MAX_KEYWORD_LENGTH = 128;
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const keyword = searchParams.get("keyword");
+  const keyword = searchParams.get("keyword")?.trim();
 
   if (!keyword) {
     return NextResponse.json(
       { error: "Keyword parameter is required" },
+      { status: 400 }
+    );
+  }
+
+  if (keyword.length > MAX_KEYWORD_LENGTH) {
+    return NextResponse.json(
+      { error: `キーワードは${MAX_KEYWORD_LENGTH}文字以内で指定してください。` },
       { status: 400 }
     );
   }
@@ -38,11 +48,22 @@ export async function GET(request: Request) {
     });
     
     if (!response.ok) {
+      // 上流のエラー本文はクライアントに返さない。
+      // バックエンド構成や資格情報の状態が推測できる情報源になるため、
+      // 詳細はサーバーログだけに残し、利用者には汎用メッセージを返す。
       const errData = await response.json().catch(() => ({}));
-      console.error("Rakuten API Error:", errData);
+      console.error("Rakuten API Error:", response.status, errData);
+
+      if (response.status === 429) {
+        return NextResponse.json(
+          { error: "現在混み合っています。しばらくしてから再試行してください。" },
+          { status: 429 }
+        );
+      }
+
       return NextResponse.json(
-        { error: `楽天APIエラー: ${errData.error_description || errData.error || response.statusText}` },
-        { status: response.status }
+        { error: "商品情報の取得に失敗しました。" },
+        { status: 502 }
       );
     }
 

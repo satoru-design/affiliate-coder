@@ -17,6 +17,39 @@ interface ProductData {
   shopName: string;
 }
 
+// 生成HTMLに差し込む文字列をエスケープする。
+// 外部API由来の商品名などがそのまま属性やテキストに入ると、
+// プレビュー表示とコピー先のブログの両方でHTMLを注入できてしまう。
+function escapeHtml(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// href / src に入れるURLは http/https のみ許可する。
+// javascript: や data: のスキームを弾く。
+function safeUrl(value: unknown): string {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return "";
+    return parsed.toString();
+  } catch {
+    return "";
+  }
+}
+
+// AmazonトラッキングIDの書式。英数字とハイフン、アンダースコアのみ。
+const AMAZON_ID_PATTERN = /^[A-Za-z0-9_-]{1,32}$/;
+
+function sanitizeAmazonId(value: string): string {
+  return AMAZON_ID_PATTERN.test(value.trim()) ? value.trim() : "";
+}
+
 export default function Home() {
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -61,31 +94,35 @@ export default function Home() {
 
   const getAmazonUrl = (productName: string) => {
     const baseUrl = `https://www.amazon.co.jp/s?k=${encodeURIComponent(productName)}`;
-    return amazonId ? `${baseUrl}&tag=${amazonId}` : baseUrl;
+    const safeId = sanitizeAmazonId(amazonId);
+    return safeId ? `${baseUrl}&tag=${encodeURIComponent(safeId)}` : baseUrl;
   };
 
   const generateHtmlContent = () => {
     if (!product) return "";
-    const amzUrl = getAmazonUrl(keyword || product.itemName); // Use keyword preferred for broader search, or itemName
-    
+    const amzUrl = escapeHtml(safeUrl(getAmazonUrl(keyword || product.itemName))); // Use keyword preferred for broader search, or itemName
+    const rakutenUrl = escapeHtml(safeUrl(product.affiliateUrl));
+    const imageUrl = escapeHtml(safeUrl(product.imageUrl));
+    const itemName = escapeHtml(product.itemName);
+
     // インラインスタイル多用のHTML
     return `
 <div style="background:#fff; border:1px solid #f1f5f9; border-radius:8px; padding:24px; max-width:600px; margin:24px auto; font-family:sans-serif; box-shadow:0 1px 2px rgba(0,0,0,0.02); box-sizing:border-box;">
   <div style="display:flex; gap:24px; flex-wrap:wrap; align-items:center;">
     <div style="flex-shrink:0; margin:0 auto;">
-      <a href="${product.affiliateUrl}" target="_blank" rel="noopener sponsored">
-        <img src="${product.imageUrl}" alt="${product.itemName}" style="max-width:100%; width:300px; aspect-ratio:1/1; object-fit:contain; border-radius:4px; border:none;" />
+      <a href="${rakutenUrl}" target="_blank" rel="noopener sponsored">
+        <img src="${imageUrl}" alt="${itemName}" style="max-width:100%; width:300px; aspect-ratio:1/1; object-fit:contain; border-radius:4px; border:none;" />
       </a>
     </div>
     <div style="flex:1; min-width:200px;">
-      <a href="${product.affiliateUrl}" target="_blank" rel="noopener sponsored" style="text-decoration:none; color:#0f172a; font-size:16px; font-weight:500; line-height:1.6; display:block;">
-        ${product.itemName}
+      <a href="${rakutenUrl}" target="_blank" rel="noopener sponsored" style="text-decoration:none; color:#0f172a; font-size:16px; font-weight:500; line-height:1.6; display:block;">
+        ${itemName}
       </a>
       <div style="display:flex; gap:12px; margin-top:20px; flex-wrap:wrap;">
         <a href="${amzUrl}" target="_blank" rel="noopener sponsored" style="flex:1; min-width:120px; text-align:center; padding:10px 16px; border:1px solid #e69a00; border-radius:6px; color:#ffffff; text-decoration:none; font-size:14px; font-weight:500; background:#f5a623; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
           Amazonで見る
         </a>
-        <a href="${product.affiliateUrl}" target="_blank" rel="noopener sponsored" style="flex:1; min-width:120px; text-align:center; padding:10px 16px; border:1px solid #a80000; border-radius:6px; color:#ffffff; text-decoration:none; font-size:14px; font-weight:500; background:#bf0000; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+        <a href="${rakutenUrl}" target="_blank" rel="noopener sponsored" style="flex:1; min-width:120px; text-align:center; padding:10px 16px; border:1px solid #a80000; border-radius:6px; color:#ffffff; text-decoration:none; font-size:14px; font-weight:500; background:#bf0000; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
           楽天で見る
         </a>
       </div>

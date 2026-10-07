@@ -16,6 +16,10 @@ import { Label } from "@/components/ui/label";
 import { Settings } from "lucide-react";
 import { toast } from "sonner";
 
+// AmazonトラッキングIDの書式。英数字とハイフン、アンダースコアのみ。
+// 記号混じりの値を保存させないことで、生成HTMLへの注入やリンク差し替えを防ぐ。
+const AMAZON_ID_PATTERN = /^[A-Za-z0-9_-]{1,32}$/;
+
 export function SettingsDialog() {
   const [amazonId, setAmazonId] = useState("strkkcogmailc-22");
   const [open, setOpen] = useState(false);
@@ -30,7 +34,14 @@ export function SettingsDialog() {
   }, []);
 
   const handleSave = () => {
-    localStorage.setItem("amazon_tracking_id", amazonId);
+    const trimmed = amazonId.trim();
+    if (trimmed && !AMAZON_ID_PATTERN.test(trimmed)) {
+      toast.error("トラッキングIDの形式が正しくありません", {
+        description: "英数字とハイフン、アンダースコアのみ使用できます。",
+      });
+      return;
+    }
+    localStorage.setItem("amazon_tracking_id", trimmed);
     setOpen(false);
     toast("設定を保存しました", {
       description: "AmazonトラッキングIDが更新されました。",

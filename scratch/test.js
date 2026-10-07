@@ -1,10 +1,24 @@
 const https = require('https');
 
-const appId = '1086341595318833757';
-const affiliateId = '0a1021a6.799124d3.0a1021a7.ae1e5f5e';
-const keyword = 'test';
+// 資格情報はコードに書かず環境変数から読む。
+// 例: RAKUTEN_APP_ID=xxx RAKUTEN_AFFILIATE_ID=yyy node scratch/test.js
+const appId = process.env.RAKUTEN_APP_ID;
+const affiliateId = process.env.RAKUTEN_AFFILIATE_ID;
+const keyword = process.env.RAKUTEN_TEST_KEYWORD || 'test';
 
-const url = `https://app.rakuten.co.jp/services/api/IchibaItem/Search/20220601?applicationId=${appId}&affiliateId=${affiliateId}&keyword=${keyword}&hits=1`;
+if (!appId || !affiliateId) {
+  console.error('RAKUTEN_APP_ID と RAKUTEN_AFFILIATE_ID を環境変数で指定してください。');
+  process.exit(1);
+}
+
+const params = new URLSearchParams({
+  applicationId: appId,
+  affiliateId: affiliateId,
+  keyword: keyword,
+  hits: '1',
+});
+
+const url = `https://app.rakuten.co.jp/services/api/IchibaItem/Search/20220601?${params.toString()}`;
 
 https.get(url, (res) => {
   let data = '';
